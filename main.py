@@ -1,15 +1,25 @@
 # -*- coding:UTF-8 -*-
-
+from __future__ import unicode_literals
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 import os
 import time
+import math
+import datetime
 import socket
 import re
 import subprocess
 from subprocess import Popen, PIPE
 
+
 #--------------Driver Library-----------------#
 import RPi.GPIO as GPIO
 import OLED_Driver as OLED
+from luma.core.interface.serial import spi
+from luma.core.render import canvas
+from luma.oled.device import ssd1351
+import RPi.GPIO as GPIO
 
 #--------------Image Library---------------#
 from PIL import Image
@@ -23,195 +33,259 @@ mpd_host = 'localhost'
 mpd_port = 6600
 mpd_bufsize = 8192
 soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+scroll_unit = 4
+file_offset = 0
+artist_offset = 0
+album_offset = 0
+audio_state = "Unknown"
+audio_rate = "Unknown"
+audio_time = "Unknown"
+audio_elapsed = "Unknown"
+audio_file = "Unknown"
+audio_artist = "Unknown"
+audio_album = "Unknown"
+audio_title = "Unknown"
+audio_timebar = 0
+audio_device = 0
 
 #--------------Utils---------------#
 def getLANIP():
-   cmd = "ip addr show wlan0 | grep inet  | grep -v inet6 | awk '{print $2}' | cut -d '/' -f 1"
-   p = Popen(cmd, shell=True, stdout=PIPE)
-   output = p.communicate()[0]
-   return output[:-1]
+    cmd = "ip addr show wlan0 | grep inet  | grep -v inet6 | awk '{print $2}' | cut -d '/' -f 1"
+    p = Popen(cmd, shell=True, stdout=PIPE)
+    output = p.communicate()[0]
+    return output[:-1]
+
+def getAudioDevice():
+    global audio_device
+    cmd = "aplay -l | grep -A 2 'USB' | grep 'Subdevices'"
+    p = Popen(cmd, shell=True, stdout=PIPE)
+    output = p.communicate()[0]
+    output = re.split(':', str(output))[1]
+    if re.split('/', output)[0].strip() == "1":
+        audio_device = 1
+    else:
+        audio_device = 0
+
+def sec2Time(sec):
+    cur_time = datetime.timedelta(seconds=float(sec))
+    time_details = re.split(':', str(cur_time))
+    h = time_details[0]
+    m = time_details[1]
+    s = time_details[2]
+    if h == "0":
+        return m + ":" + s
+    else:
+        return h + ":" + m + ":" + s
+
+def makeFont(name, size):
+    font_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), 'fonts', name))
+    return ImageFont.truetype(font_path, size)
+
+def drawText(draw, size, logo, text, color, align, x, y):
+    logo_font = makeFont("fa5s.otf", size)
+    text_font = makeFont("Deng.ttf", size)
+    logo_width, char = logo_font.getsize(logo)
+    text_width, char = text_font.getsize(text)
+    total_width = logo_width + text_width
+    left_align = x
+    right_align = OLED.SSD1351_WIDTH - total_width
+    center_align = right_align / 2
+    if align == "center":
+        draw.text((center_align, y), logo, fill = color, font = logo_font)
+        draw.text((center_align + logo_width, y), text, fill = color, font = text_font)
+    elif align == "left":
+        draw.text((left_align, y), logo, fill = color, font = logo_font)
+        draw.text((left_align + logo_width, y), text, fill = color, font = text_font)
+    elif align == "right":
+        draw.text((right_align, y), logo, fill = color, font = logo_font)
+        draw.text((right_align + logo_width, y), text, fill = color, font = text_font)
+
+def drawDots(draw, index, total):
+    regular_font = makeFont("fa5r.otf", 8)
+    solid_font = makeFont("fa5s.otf", 8)
+    dots_width, char = regular_font.getsize("\uf111 ")
+    last_dot_width, shar = regular_font.getsize("\uf111")
+    total_width = dots_width * (total - 1) + last_dot_width
+    right_align = OLED.SSD1351_WIDTH - total_width
+    center_align = right_align / 2
+    for num in range(1,total + 1):
+        if num == index:
+            draw.text((center_align, 120), "\uf111", fill = "WHITE", font = solid_font)
+            center_align += dots_width
+        else:
+            draw.text((center_align, 120), "\uf111", fill = "WHITE", font = regular_font)
+            center_align += dots_width
 
 #--------------MPD Library---------------#
-
-def initMPD():   
+def initMPD():
     soc.connect((mpd_host, mpd_port))
     soc.recv(mpd_bufsize)
     soc.send('commands\n')
     rcv = soc.recv(mpd_bufsize)
-    print(123)
-    print(rcv)
 
+def sendMPDCommand(command):
+    soc.send(command + "\n")
+    rcv = soc.recv(mpd_bufsize)
+    return rcv
+
+def parseAudioRate(audio_str):
+    audio_str = audio_str.replace("audio: ", "")
+    audio_details = re.split(':',audio_str)
+    audio_bit = audio_details[1] + "bit"
+    audio_rate = audio_details[0]
+    if  audio_details[0] == '22050':
+        audio_rate = '22.05k'
+    elif audio_details[0] == '32000':
+        audio_rate = '32k'
+    elif audio_details[0] == '44100':
+        audio_rate = '44.1k'
+    elif audio_details[0] == '48000':
+        audio_rate = '48k'
+    elif audio_details[0] == '88200':
+        audio_rate = '88.2k'
+    elif audio_details[0] == '96000':
+        audio_rate = '96k'
+    elif audio_details[0] == '176400':
+        audio_rate = '176.4k'
+    elif audio_details[0] == '192000':
+        audio_rate = '192k'
+    elif audio_details[0] == '352800':
+        audio_rate = '352.8k'
+    elif audio_details[0] == '384000':
+        audio_rate = '384k'
+    elif audio_details[0] == '705600':
+        audio_rate = '705.6k'
+    elif audio_details[0] == '768000':
+        audio_rate = '768k'
+    else:
+        audio_bit = ""
+    if audio_bit == "":
+        return audio_rate.upper()
+    else:
+        return audio_rate.upper() + "/" + audio_bit
+
+def getDetails():
+    song_list = sendMPDCommand("currentsong").splitlines()
+    state_list = sendMPDCommand("status").splitlines()
+    global audio_state, audio_rate, audio_time, audio_elapsed, audio_file, audio_artist, audio_album, audio_title, audio_timebar
+    for line in range(0, len(state_list)):
+        if state_list[line].startswith("state: "):
+            audio_state = state_list[line].replace("state: ", "")
+            if audio_state != "play":
+                return
+        elif state_list[line].startswith("audio: "):
+            audio_rate = parseAudioRate(state_list[line])
+        elif state_list[line].startswith("time: "):
+            audio_time = state_list[line].split(":")[2]
+            audio_elapsed = state_list[line].split(":")[1]
+            audio_timebar = math.ceil(float(audio_elapsed) / float(audio_time) * OLED.SSD1351_WIDTH)
+            audio_time = sec2Time(audio_time)
+            audio_elapsed = sec2Time(audio_elapsed)
+    for line in range(0, len(song_list)):
+        if song_list[line].startswith("file: "):
+            audio_file = song_list[line].replace("file: ", "")
+        elif song_list[line].startswith("Artist: "):
+            audio_artist = song_list[line].replace("Artist: ", "")
+        elif song_list[line].startswith("Album: "):
+            audio_album = song_list[line].replace("Album: ", "")
+        elif song_list[line].startswith("Title: "):
+            audio_title = song_list[line].replace("Title: ", "")
 #-------------Display Functions---------------#
-
-def Test_Text():
+def dateScreen():
     image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
     draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype('Deng.ttf',24)
+    cur_time = time.strftime("%H:%M:%S %a", time.localtime())
+    cur_date = time.strftime("%Y-%m-%d", time.localtime())
+    cur_ip = getLANIP()
+    drawText(draw, 15, "", "moOde Audio", "WHITE", "center", 0, 2)
+    drawText(draw, 20, "", cur_date, "WHITE", "center", 0, 22)
+    drawText(draw, 20, "", cur_time, "WHITE", "center", 0, 42)
+    drawText(draw, 15, "\uf6ff ", cur_ip, "WHITE", "center", 0, 70)
+    drawText(draw, 15, "\uf83e ", "GUSTARD U16", "WHITE", "center", 0, 86)
+    drawDots(draw, 1, 3)
+    OLED.Display_Image(image.rotate(-90))
 
-    draw.text((0, 12), 'WaveShare', fill = "BLUE", font = font)
-    draw.text((0, 36), 'Electronic', fill = "BLUE",font = font)
-    draw.text((20, 72), u'1.5 英寸', fill = "CYAN", font = font)
-    draw.text((10, 96), 'R', fill = "RED", font = font)
-    draw.text((25, 96), 'G', fill = "GREEN", font = font)
-    draw.text((40, 96), 'B', fill = "BLUE", font = font)
-    draw.text((55, 96), ' OLED', fill = "CYAN", font = font)
-
-    OLED.Display_Image(image)
-
-
-def Test_Pattern():
+def roonScreen():
     image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
     draw = ImageDraw.Draw(image)
-    
-    draw.line([(0,8), (127,8)],   fill = "RED",    width = 16)
-    draw.line([(0,24),(127,24)],  fill = "YELLOW", width = 16)
-    draw.line([(0,40),(127,40)],  fill = "GREEN",  width = 16)
-    draw.line([(0,56),(127,56)],  fill = "CYAN",   width = 16)
-    draw.line([(0,72),(127,72)],  fill = "BLUE",   width = 16)
-    draw.line([(0,88),(127,88)],  fill = "MAGENTA",width = 16)
-    draw.line([(0,104),(127,104)],fill = "BLACK",  width = 16)
-    draw.line([(0,120),(127,120)],fill = "WHITE",  width = 16)
-    
-    OLED.Display_Image(image)
+    cur_ip = getLANIP()
+    drawText(draw, 20, "", "ROON", "WHITE", "center", 0, 10)
+    drawText(draw, 20, "", "HQPlayer", "WHITE", "center", 0, 35)
+    drawText(draw, 15, "\uf6ff ", "192.168.50.200", "WHITE", "center", 0, 70)
+    drawText(draw, 15, "\uf83e ", "GUSTARD U16", "WHITE", "center", 0, 86)
+    drawDots(draw, 3, 3)
+    OLED.Display_Image(image.rotate(-90))
 
-
-def Test_Lines():
+def moodeScreen():
+    global audio_state, audio_rate, audio_time, audio_elapsed, audio_file, audio_artist, audio_album, audio_title, audio_timebar
+    global file_offset, artist_offset, album_offset
     image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
     draw = ImageDraw.Draw(image)
+    text_font_18 = makeFont("Deng.ttf", 18)
+    text_font_20 = makeFont("Deng.ttf", 20)
+    if text_font_20.getsize(audio_file)[0] > OLED.SSD1351_WIDTH:
+        drawText(draw, 20, "", audio_file, "WHITE", "left", 0 - file_offset, 5)
+        file_offset = file_offset + scroll_unit
+        if file_offset + OLED.SSD1351_WIDTH - 20 > text_font_20.getsize(audio_file)[0]:
+            file_offset = 0
+    else:
+        drawText(draw, 20, "", audio_file, "WHITE", "center", 0, 5)
 
-    for x in range(0, int((OLED.SSD1351_WIDTH-1)/2), 6):
-        draw.line([(0, 0), (x, OLED.SSD1351_HEIGHT - 1)], fill = "RED", width = 1)
-        draw.line([(0, 0), ((OLED.SSD1351_WIDTH-1) - x, OLED.SSD1351_HEIGHT - 1)], fill = "RED", width = 1)
-        draw.line([(0, 0), (OLED.SSD1351_WIDTH - 1, x)], fill = "RED", width = 1)
-        draw.line([(0, 0), (OLED.SSD1351_WIDTH - 1, (OLED.SSD1351_HEIGHT-1) - x)], fill = "RED", width = 1)
-        OLED.Display_Image(image)
-    OLED.Delay(250)
-    draw.rectangle([0, 0, OLED.SSD1351_WIDTH - 1, OLED.SSD1351_HEIGHT - 1], fill = "BLACK", outline = "BLACK")
+    if text_font_18.getsize(audio_artist)[0] > OLED.SSD1351_WIDTH:
+        drawText(draw, 18, "", audio_artist, "WHITE", "left", 0 - artist_offset, 30)
+        artist_offset = artist_offset + scroll_unit
+        if artist_offset + OLED.SSD1351_WIDTH - 20 > text_font_18.getsize(audio_artist)[0]:
+            artist_offset = 0
+    else:
+        drawText(draw, 18, "", audio_artist, "WHITE", "center", 0, 30)
 
-    for x in range(0, int((OLED.SSD1351_WIDTH-1)/2), 6):
-        draw.line([(OLED.SSD1351_WIDTH - 1, 0), (x, OLED.SSD1351_HEIGHT - 1)], fill = "YELLOW", width = 1)
-        draw.line([(OLED.SSD1351_WIDTH - 1, 0), (x + int((OLED.SSD1351_WIDTH-1)/2), OLED.SSD1351_HEIGHT - 1)], fill = "YELLOW", width = 1)
-        draw.line([(OLED.SSD1351_WIDTH - 1, 0), (0, x)], fill = "YELLOW", width = 1)
-        draw.line([(OLED.SSD1351_WIDTH - 1, 0), (0, x + int((OLED.SSD1351_HEIGHT-1)/2))], fill = "YELLOW", width = 1)
-        OLED.Display_Image(image)
-    OLED.Delay(250)
-    draw.rectangle([0, 0, OLED.SSD1351_WIDTH - 1, OLED.SSD1351_HEIGHT - 1], fill = "BLACK", outline = "BLACK")
-
-    for x in range(0, int((OLED.SSD1351_WIDTH-1)/2), 6):
-        draw.line([(0, OLED.SSD1351_HEIGHT - 1), (x, 0)], fill = "BLUE", width = 1)
-        draw.line([(0, OLED.SSD1351_HEIGHT - 1), (x + int((OLED.SSD1351_WIDTH-1)/2), 0)], fill = "BLUE", width = 1)
-        draw.line([(0, OLED.SSD1351_HEIGHT - 1), (OLED.SSD1351_WIDTH - 1, x)], fill = "BLUE", width = 1)
-        draw.line([(0, OLED.SSD1351_HEIGHT - 1), (OLED.SSD1351_WIDTH - 1, x + (OLED.SSD1351_HEIGHT-1)/2)], fill = "BLUE", width = 1)
-        OLED.Display_Image(image)
-    draw.rectangle([0, 0, OLED.SSD1351_WIDTH - 1, OLED.SSD1351_HEIGHT - 1], fill = "BLACK", outline = "BLACK")
-    OLED.Delay(250)
-    
-    for x in range(0, int((OLED.SSD1351_WIDTH-1)/2), 6):
-        draw.line([(OLED.SSD1351_WIDTH - 1, OLED.SSD1351_HEIGHT - 1), (x, 0)], fill = "GREEN", width = 1)
-        draw.line([(OLED.SSD1351_WIDTH - 1, OLED.SSD1351_HEIGHT - 1), (x + int((OLED.SSD1351_WIDTH-1)/2), 0)], fill = "GREEN", width = 1)
-        draw.line([(OLED.SSD1351_WIDTH - 1, OLED.SSD1351_HEIGHT - 1), (0, x)], fill = "GREEN", width = 1)
-        draw.line([(OLED.SSD1351_WIDTH - 1, OLED.SSD1351_HEIGHT - 1), (0, x + int((OLED.SSD1351_HEIGHT-1)/2))], fill = "GREEN", width = 1)
-        OLED.Display_Image(image)
-    draw.rectangle([0, 0, OLED.SSD1351_WIDTH - 1, OLED.SSD1351_HEIGHT - 1], fill = "BLACK")
+    if text_font_18.getsize(audio_album)[0] > OLED.SSD1351_WIDTH:
+        drawText(draw, 18, "", audio_album, "WHITE", "left", 0 - album_offset, 50)
+        album_offset = album_offset + scroll_unit
+        if album_offset + OLED.SSD1351_WIDTH - 20 > text_font_18.getsize(audio_album)[0]:
+            album_offset = 0
+    else:
+        drawText(draw, 18, "", audio_album, "WHITE", "center", 0, 50)
+    drawText(draw, 16, "", audio_rate, "WHITE", "center", 0, 75)
+    draw.rectangle([(0, 95), (audio_timebar, 100)], fill = "WHITE", outline = "WHITE")
+    draw.rectangle([(0, 95), (OLED.SSD1351_WIDTH - 1, 100)], fill = None, outline = "WHITE")
+    drawText(draw, 16, "", audio_elapsed, "WHITE", "left", 0, 101)
+    drawText(draw, 16, "", audio_time, "WHITE", "right", 0, 101)
+    drawDots(draw, 2, 3)
+    OLED.Display_Image(image.rotate(-90))
 
 
-def Test_HV_Lines():
-    image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
-    draw = ImageDraw.Draw(image)
-    
-    for y in range(0, OLED.SSD1351_HEIGHT - 1, 5):
-        draw.line([(0, y), (OLED.SSD1351_WIDTH - 1, y)], fill = "WHITE", width = 1)
-    OLED.Display_Image(image)
-    OLED.Delay(250)
-    for x in range(0, OLED.SSD1351_WIDTH - 1, 5):
-        draw.line([(x, 0), (x, OLED.SSD1351_HEIGHT - 1)], fill = "WHITE", width = 1)
-    OLED.Display_Image(image)
-
-
-def Test_Rects():
-    image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
-    draw = ImageDraw.Draw(image)
-    
-    for x in range(0, int((OLED.SSD1351_WIDTH-1)/2), 6):
-        draw.rectangle([(x, x), (OLED.SSD1351_WIDTH- 1 - x, OLED.SSD1351_HEIGHT-1 - x)], fill = None, outline = "WHITE")
-    OLED.Display_Image(image)
-
-
-def Test_FillRects(): 
-    image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
-    draw = ImageDraw.Draw(image)
-    
-    for x in range(OLED.SSD1351_HEIGHT-1, int((OLED.SSD1351_HEIGHT-1)/2), -6):
-        draw.rectangle([(x, x), ((OLED.SSD1351_WIDTH-1) - x, (OLED.SSD1351_HEIGHT-1) - x)], fill = "BLUE", outline = "BLUE")
-        draw.rectangle([(x, x), ((OLED.SSD1351_WIDTH-1) - x, (OLED.SSD1351_HEIGHT-1) - x)], fill = None, outline = "YELLOW")
-    OLED.Display_Image(image)
-
-
-def Test_Circles():
-    image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
-    draw = ImageDraw.Draw(image)
-
-    draw.ellipse([(0, 0), (OLED.SSD1351_WIDTH - 1, OLED.SSD1351_HEIGHT - 1)], fill = "BLUE", outline = "BLUE")
-    OLED.Display_Image(image)
-    OLED.Delay(500)
-    for r in range(0, int(OLED.SSD1351_WIDTH/2) + 4, 4):
-        draw.ellipse([(r, r), ((OLED.SSD1351_WIDTH-1) - r, (OLED.SSD1351_HEIGHT-1) - r)], fill = None, outline = "YELLOW")
-    OLED.Display_Image(image)
-
-
-def Test_Triangles():
-    image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
-    draw = ImageDraw.Draw(image)
-    
-    for i in range(0, int(OLED.SSD1351_WIDTH/2), 4):
-        draw.line([(i, OLED.SSD1351_HEIGHT - 1 - i), (OLED.SSD1351_WIDTH/2, i)], fill = (255 - i*4, i*4, 255 - i*4), width = 1)
-        draw.line([(i, OLED.SSD1351_HEIGHT - 1 - i), (OLED.SSD1351_WIDTH - 1 - i, OLED.SSD1351_HEIGHT - 1 - i)], fill = (i*4, i*4 ,255 - i*4), width = 1)
-        draw.line([(OLED.SSD1351_WIDTH - 1 - i, OLED.SSD1351_HEIGHT - 1 - i), (OLED.SSD1351_WIDTH/2, i)], fill = (i*4, 255 - i*4, i*4), width = 1)
-        OLED.Display_Image(image)
-
-
-def Display_Picture(File_Name):
-    image = Image.open(File_Name)
-    OLED.Display_Image(image)
 
 #----------------------MAIN-------------------------#
+def main():
+    OLED.Device_Init()
+    initMPD()
+    while True:
+        getDetails()
+        getAudioDevice()
+        if audio_state == "play":
+            moodeScreen()
+        elif audio_device == 0:
+            roonScreen()
+        else:
+            dateScreen()
+        time.sleep(0.05)
+
+if __name__ == '__main__':
+       main()
+       
 try:
 
     def main():
-    
-        #-------------OLED Init------------#
         OLED.Device_Init()
-
-        #-------------Draw Pictures------------#
-        Test_Pattern()
-        OLED.Delay(2000)
-        Test_Text()
-        OLED.Delay(2000)
-        Test_Lines()
-        OLED.Delay(2000)
-        Test_HV_Lines()
-        OLED.Delay(2000)
-        Test_Rects()
-        OLED.Delay(1000)
-        Test_FillRects() 
-        OLED.Delay(2000)
-        Test_Circles()
-        OLED.Delay(2000)
-        Test_Triangles()
-        OLED.Delay(2000)
-
-        while (True):
-            Display_Picture("picture1.jpg")
-            OLED.Delay(2000)
-            Display_Picture("picture2.jpg")
-            OLED.Delay(2000)
-            Display_Picture("picture3.jpg")
-            OLED.Delay(2000)
-
+        initMPD()
+        while True:
+            playScreen()
+            time.sleep(0.05)
 
     if __name__ == '__main__':
-        #main()
-        initMPD()
+       main()
 
 except:
     print("\r\nEnd")
