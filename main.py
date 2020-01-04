@@ -30,6 +30,7 @@ from PIL import ImageColor
 
 #--------------Global Vars---------------#
 is_sigint_up = False
+rotate_angle = 0
 mpd_music_dir = "/var/lib/mpd/music/"
 mpd_host = 'localhost'
 mpd_port = 6600
@@ -52,7 +53,7 @@ audio_device = 0
 
 #--------------Utils---------------#
 def getLANIP():
-    cmd = "ip addr show wlan0 | grep inet  | grep -v inet6 | awk '{print $2}' | cut -d '/' -f 1"
+    cmd = "ip addr show eth0 | grep inet  | grep -v inet6 | awk '{print $2}' | cut -d '/' -f 1"
     p = Popen(cmd, shell=True, stdout=PIPE)
     output = p.communicate()[0]
     return output[:-1]
@@ -194,6 +195,7 @@ def getDetails():
     for line in range(0, len(song_list)):
         if song_list[line].startswith("file: "):
             audio_file = song_list[line].replace("file: ", "")
+            audio_file = audio_file.split("/")[-1]
         elif song_list[line].startswith("Artist: "):
             audio_artist = song_list[line].replace("Artist: ", "")
         elif song_list[line].startswith("Album: "):
@@ -208,24 +210,24 @@ def dateScreen():
     cur_time = time.strftime("%H:%M:%S %a", time.localtime())
     cur_date = time.strftime("%Y-%m-%d", time.localtime())
     cur_ip = getLANIP()
-    drawText(draw, 15, "", "moOde Audio", "WHITE", "center", 0, 2)
-    drawText(draw, 20, "", cur_date, "WHITE", "center", 0, 22)
-    drawText(draw, 20, "", cur_time, "WHITE", "center", 0, 42)
-    drawText(draw, 15, "\uf6ff ", cur_ip, "WHITE", "center", 0, 70)
-    drawText(draw, 15, "\uf83e ", "GUSTARD U16", "WHITE", "center", 0, 86)
+    drawText(draw, 15, "", "moOde Audio", "WHITE", "center", 0, 5)
+    drawText(draw, 20, "", cur_date, "WHITE", "center", 0, 30)
+    drawText(draw, 20, "", cur_time, "WHITE", "center", 0, 51)
+    drawText(draw, 15, "\uf6ff ", cur_ip, "WHITE", "left", 5, 80)
+    drawText(draw, 15, "\uf83e ", "GUSTARD U16", "WHITE", "left", 5, 96)
     drawDots(draw, 1, 3)
-    OLED.Display_Image(image.rotate(-180))
+    OLED.Display_Image(image.rotate(rotate_angle))
 
 def roonScreen():
     image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
     draw = ImageDraw.Draw(image)
     cur_ip = getLANIP()
-    drawText(draw, 20, "", "ROON", "WHITE", "center", 0, 10)
-    drawText(draw, 20, "", "HQPlayer", "WHITE", "center", 0, 35)
-    drawText(draw, 15, "\uf6ff ", "192.168.50.200", "WHITE", "center", 0, 70)
-    drawText(draw, 15, "\uf83e ", "GUSTARD U16", "WHITE", "center", 0, 86)
+    drawText(draw, 20, "", "Renderers", "WHITE", "center", 0, 18)
+    drawText(draw, 20, "", "ROON/HQ/BLE", "WHITE", "center", 0, 42)
+    drawText(draw, 15, "\uf6ff ", "192.168.50.200", "WHITE", "center", 0, 80)
+    drawText(draw, 15, "\uf83e ", "GUSTARD U16", "WHITE", "center", 0, 96)
     drawDots(draw, 3, 3)
-    OLED.Display_Image(image.rotate(-180))
+    OLED.Display_Image(image.rotate(rotate_angle))
 
 def moodeScreen():
     global audio_state, audio_rate, audio_time, audio_elapsed, audio_file, audio_artist, audio_album, audio_title, audio_timebar
@@ -263,7 +265,7 @@ def moodeScreen():
     drawText(draw, 16, "", audio_elapsed, "WHITE", "left", 0, 101)
     drawText(draw, 16, "", audio_time, "WHITE", "right", 0, 101)
     drawDots(draw, 2, 3)
-    OLED.Display_Image(image.rotate(-180))
+    OLED.Display_Image(image.rotate(rotate_angle))
 
 #----------------------MAIN-------------------------#
 try:
