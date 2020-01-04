@@ -10,6 +10,7 @@ import datetime
 import socket
 import re
 import subprocess
+import signal
 from subprocess import Popen, PIPE
 
 
@@ -28,6 +29,7 @@ from PIL import ImageFont
 from PIL import ImageColor
 
 #--------------Global Vars---------------#
+is_sigint_up = False
 mpd_music_dir = "/var/lib/mpd/music/"
 mpd_host = 'localhost'
 mpd_port = 6600
@@ -54,6 +56,10 @@ def getLANIP():
     p = Popen(cmd, shell=True, stdout=PIPE)
     output = p.communicate()[0]
     return output[:-1]
+
+def sigint_handler(signum, frame):
+    global is_sigint_up
+    is_sigint_up = True
 
 def getAudioDevice():
     global audio_device
@@ -169,6 +175,9 @@ def getDetails():
     song_list = sendMPDCommand("currentsong").splitlines()
     state_list = sendMPDCommand("status").splitlines()
     global audio_state, audio_rate, audio_time, audio_elapsed, audio_file, audio_artist, audio_album, audio_title, audio_timebar
+    audio_artist = "Unknown"
+    audio_album = "Unknown"
+    audio_title = "Unknown"
     for line in range(0, len(state_list)):
         if state_list[line].startswith("state: "):
             audio_state = state_list[line].replace("state: ", "")
@@ -191,6 +200,7 @@ def getDetails():
             audio_album = song_list[line].replace("Album: ", "")
         elif song_list[line].startswith("Title: "):
             audio_title = song_list[line].replace("Title: ", "")
+
 #-------------Display Functions---------------#
 def dateScreen():
     image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
@@ -204,7 +214,7 @@ def dateScreen():
     drawText(draw, 15, "\uf6ff ", cur_ip, "WHITE", "center", 0, 70)
     drawText(draw, 15, "\uf83e ", "GUSTARD U16", "WHITE", "center", 0, 86)
     drawDots(draw, 1, 3)
-    OLED.Display_Image(image.rotate(-90))
+    OLED.Display_Image(image.rotate(-180))
 
 def roonScreen():
     image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
@@ -215,7 +225,7 @@ def roonScreen():
     drawText(draw, 15, "\uf6ff ", "192.168.50.200", "WHITE", "center", 0, 70)
     drawText(draw, 15, "\uf83e ", "GUSTARD U16", "WHITE", "center", 0, 86)
     drawDots(draw, 3, 3)
-    OLED.Display_Image(image.rotate(-90))
+    OLED.Display_Image(image.rotate(-180))
 
 def moodeScreen():
     global audio_state, audio_rate, audio_time, audio_elapsed, audio_file, audio_artist, audio_album, audio_title, audio_timebar
@@ -253,41 +263,32 @@ def moodeScreen():
     drawText(draw, 16, "", audio_elapsed, "WHITE", "left", 0, 101)
     drawText(draw, 16, "", audio_time, "WHITE", "right", 0, 101)
     drawDots(draw, 2, 3)
-    OLED.Display_Image(image.rotate(-90))
-
-
+    OLED.Display_Image(image.rotate(-180))
 
 #----------------------MAIN-------------------------#
-def main():
-    OLED.Device_Init()
-    initMPD()
-    while True:
-        getDetails()
-        getAudioDevice()
-        if audio_state == "play":
-            moodeScreen()
-        elif audio_device == 0:
-            roonScreen()
-        else:
-            dateScreen()
-        time.sleep(0.05)
-
-if __name__ == '__main__':
-       main()
-       
 try:
 
     def main():
         OLED.Device_Init()
         initMPD()
+        signal.signal(signal.SIGINT, sigint_handler)
+        signal.signal(signal.SIGHUP, sigint_handler)
+        signal.signal(signal.SIGTERM, sigint_handler)
         while True:
-            playScreen()
-            time.sleep(0.05)
-
+            getDetails()
+            getAudioDevice()
+            if audio_state == "play":
+                moodeScreen()
+            elif audio_device == 0:
+                roonScreen()
+            else:
+                dateScreen()
+            if is_sigint_up:
+                OLED.Clear_Screen()
+                GPIO.cleanup()
+                exit(0)
+            OLED.Delay(50)
     if __name__ == '__main__':
-       main()
-
-except:
-    print("\r\nEnd")
-    OLED.Clear_Screen()
-    GPIO.cleanup()
+        main()
+except Exception as e:
+    print(e)

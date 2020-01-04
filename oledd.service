@@ -1,0 +1,13 @@
+[Unit]
+Description=OLED Display Service
+After=mpd.service
+
+[Service]
+ExecStartPre=/bin/sleep 10
+ExecStart=/usr/bin/python /home/pi/MPD_Extension/main.py
+StandardOutput=null
+Type=simple
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
