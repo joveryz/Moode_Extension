@@ -1,32 +1,27 @@
 # -*- coding:UTF-8 -*-
 from __future__ import unicode_literals
-import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
-import os
-import time
-import math
-import datetime
-import socket
-import re
-import subprocess
-import signal
-from subprocess import Popen, PIPE
-
-
-#--------------Driver Library-----------------#
-import RPi.GPIO as GPIO
-import OLED_Driver as OLED
-from luma.core.interface.serial import spi
-from luma.core.render import canvas
-from luma.oled.device import ssd1351
-import RPi.GPIO as GPIO
-
-#--------------Image Library---------------#
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
 from PIL import ImageColor
+from PIL import ImageFont
+from PIL import ImageDraw
+from PIL import Image
+from luma.oled.device import ssd1351
+from luma.core.render import canvas
+from luma.core.interface.serial import spi
+import OLED_Driver as OLED
+import RPi.GPIO as GPIO
+from subprocess import Popen, PIPE
+import signal
+import subprocess
+import re
+import socket
+import datetime
+import math
+import time
+import os
+import sys
+import importlib
+importlib.reload(sys)
+
 
 #--------------Global Vars---------------#
 is_sigint_up = False
@@ -52,15 +47,19 @@ audio_timebar = 0
 audio_device = 0
 
 #--------------Utils---------------#
+
+
 def getLANIP():
     cmd = "ip addr show eth0 | grep inet  | grep -v inet6 | awk '{print $2}' | cut -d '/' -f 1"
     p = Popen(cmd, shell=True, stdout=PIPE)
     output = p.communicate()[0]
     return output[:-1]
 
+
 def sigint_handler(signum, frame):
     global is_sigint_up
     is_sigint_up = True
+
 
 def getAudioDevice():
     global audio_device
@@ -73,6 +72,7 @@ def getAudioDevice():
     else:
         audio_device = 0
 
+
 def sec2Time(sec):
     cur_time = datetime.timedelta(seconds=float(sec))
     time_details = re.split(':', str(cur_time))
@@ -84,10 +84,12 @@ def sec2Time(sec):
     else:
         return h + ":" + m + ":" + s
 
+
 def makeFont(name, size):
     font_path = os.path.abspath(os.path.join(
         os.path.dirname(__file__), 'fonts', name))
     return ImageFont.truetype(font_path, size)
+
 
 def drawText(draw, size, logo, text, color, align, x, y):
     logo_font = makeFont("fa5s.otf", size)
@@ -99,14 +101,18 @@ def drawText(draw, size, logo, text, color, align, x, y):
     right_align = OLED.SSD1351_WIDTH - total_width
     center_align = right_align / 2
     if align == "center":
-        draw.text((center_align, y), logo, fill = color, font = logo_font)
-        draw.text((center_align + logo_width, y), text, fill = color, font = text_font)
+        draw.text((center_align, y), logo, fill=color, font=logo_font)
+        draw.text((center_align + logo_width, y),
+                  text, fill=color, font=text_font)
     elif align == "left":
-        draw.text((left_align, y), logo, fill = color, font = logo_font)
-        draw.text((left_align + logo_width, y), text, fill = color, font = text_font)
+        draw.text((left_align, y), logo, fill=color, font=logo_font)
+        draw.text((left_align + logo_width, y),
+                  text, fill=color, font=text_font)
     elif align == "right":
-        draw.text((right_align, y), logo, fill = color, font = logo_font)
-        draw.text((right_align + logo_width, y), text, fill = color, font = text_font)
+        draw.text((right_align, y), logo, fill=color, font=logo_font)
+        draw.text((right_align + logo_width, y),
+                  text, fill=color, font=text_font)
+
 
 def drawDots(draw, index, total):
     regular_font = makeFont("fa5r.otf", 8)
@@ -116,32 +122,38 @@ def drawDots(draw, index, total):
     total_width = dots_width * (total - 1) + last_dot_width
     right_align = OLED.SSD1351_WIDTH - total_width
     center_align = right_align / 2
-    for num in range(1,total + 1):
+    for num in range(1, total + 1):
         if num == index:
-            draw.text((center_align, 120), "\uf111", fill = "WHITE", font = solid_font)
+            draw.text((center_align, 120), "\uf111",
+                      fill="WHITE", font=solid_font)
             center_align += dots_width
         else:
-            draw.text((center_align, 120), "\uf111", fill = "WHITE", font = regular_font)
+            draw.text((center_align, 120), "\uf111",
+                      fill="WHITE", font=regular_font)
             center_align += dots_width
 
 #--------------MPD Library---------------#
+
+
 def initMPD():
     soc.connect((mpd_host, mpd_port))
     soc.recv(mpd_bufsize)
     soc.send('commands\n')
     rcv = soc.recv(mpd_bufsize)
 
+
 def sendMPDCommand(command):
     soc.send(command + "\n")
     rcv = soc.recv(mpd_bufsize)
     return rcv
 
+
 def parseAudioRate(audio_str):
     audio_str = audio_str.replace("audio: ", "")
-    audio_details = re.split(':',audio_str)
+    audio_details = re.split(':', audio_str)
     audio_bit = audio_details[1] + "bit"
     audio_rate = audio_details[0]
-    if  audio_details[0] == '22050':
+    if audio_details[0] == '22050':
         audio_rate = '22.05k'
     elif audio_details[0] == '32000':
         audio_rate = '32k'
@@ -172,6 +184,7 @@ def parseAudioRate(audio_str):
     else:
         return audio_rate.upper() + "/" + audio_bit
 
+
 def getDetails():
     song_list = sendMPDCommand("currentsong").splitlines()
     state_list = sendMPDCommand("status").splitlines()
@@ -189,7 +202,8 @@ def getDetails():
         elif state_list[line].startswith("time: "):
             audio_time = state_list[line].split(":")[2]
             audio_elapsed = state_list[line].split(":")[1]
-            audio_timebar = math.ceil(float(audio_elapsed) / float(audio_time) * OLED.SSD1351_WIDTH)
+            audio_timebar = math.ceil(
+                float(audio_elapsed) / float(audio_time) * OLED.SSD1351_WIDTH)
             audio_time = sec2Time(audio_time)
             audio_elapsed = sec2Time(audio_elapsed)
     for line in range(0, len(song_list)):
@@ -204,8 +218,11 @@ def getDetails():
             audio_title = song_list[line].replace("Title: ", "")
 
 #-------------Display Functions---------------#
+
+
 def dateScreen():
-    image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
+    image = Image.new("RGB", (OLED.SSD1351_WIDTH,
+                              OLED.SSD1351_HEIGHT), "BLACK")
     draw = ImageDraw.Draw(image)
     cur_time = time.strftime("%H:%M:%S %a", time.localtime())
     cur_date = time.strftime("%Y-%m-%d", time.localtime())
@@ -218,10 +235,11 @@ def dateScreen():
     drawDots(draw, 1, 3)
     OLED.Display_Image(image.rotate(rotate_angle))
 
+
 def roonScreen():
-    image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
+    image = Image.new("RGB", (OLED.SSD1351_WIDTH,
+                              OLED.SSD1351_HEIGHT), "BLACK")
     draw = ImageDraw.Draw(image)
-    cur_ip = getLANIP()
     drawText(draw, 20, "", "Renderers", "WHITE", "center", 0, 18)
     drawText(draw, 20, "", "ROON/HQ/BLE", "WHITE", "center", 0, 42)
     drawText(draw, 15, "\uf6ff ", "192.168.50.200", "WHITE", "center", 0, 80)
@@ -229,10 +247,12 @@ def roonScreen():
     drawDots(draw, 3, 3)
     OLED.Display_Image(image.rotate(rotate_angle))
 
+
 def moodeScreen():
     global audio_state, audio_rate, audio_time, audio_elapsed, audio_file, audio_artist, audio_album, audio_title, audio_timebar
     global file_offset, artist_offset, album_offset
-    image = Image.new("RGB", (OLED.SSD1351_WIDTH, OLED.SSD1351_HEIGHT), "BLACK")
+    image = Image.new("RGB", (OLED.SSD1351_WIDTH,
+                              OLED.SSD1351_HEIGHT), "BLACK")
     draw = ImageDraw.Draw(image)
     text_font_18 = makeFont("Deng.ttf", 18)
     text_font_20 = makeFont("Deng.ttf", 20)
@@ -245,7 +265,8 @@ def moodeScreen():
         drawText(draw, 20, "", audio_file, "WHITE", "center", 0, 5)
 
     if text_font_18.getsize(audio_artist)[0] > OLED.SSD1351_WIDTH:
-        drawText(draw, 18, "", audio_artist, "WHITE", "left", 0 - artist_offset, 30)
+        drawText(draw, 18, "", audio_artist, "WHITE",
+                 "left", 0 - artist_offset, 30)
         artist_offset = artist_offset + scroll_unit
         if artist_offset + OLED.SSD1351_WIDTH - 20 > text_font_18.getsize(audio_artist)[0]:
             artist_offset = 0
@@ -253,19 +274,23 @@ def moodeScreen():
         drawText(draw, 18, "", audio_artist, "WHITE", "center", 0, 30)
 
     if text_font_18.getsize(audio_album)[0] > OLED.SSD1351_WIDTH:
-        drawText(draw, 18, "", audio_album, "WHITE", "left", 0 - album_offset, 50)
+        drawText(draw, 18, "", audio_album, "WHITE",
+                 "left", 0 - album_offset, 50)
         album_offset = album_offset + scroll_unit
         if album_offset + OLED.SSD1351_WIDTH - 20 > text_font_18.getsize(audio_album)[0]:
             album_offset = 0
     else:
         drawText(draw, 18, "", audio_album, "WHITE", "center", 0, 50)
     drawText(draw, 16, "", audio_rate, "WHITE", "center", 0, 75)
-    draw.rectangle([(0, 95), (audio_timebar, 100)], fill = "WHITE", outline = "WHITE")
-    draw.rectangle([(0, 95), (OLED.SSD1351_WIDTH - 1, 100)], fill = None, outline = "WHITE")
+    draw.rectangle([(0, 95), (audio_timebar, 100)],
+                   fill="WHITE", outline="WHITE")
+    draw.rectangle([(0, 95), (OLED.SSD1351_WIDTH - 1, 100)],
+                   fill=None, outline="WHITE")
     drawText(draw, 16, "", audio_elapsed, "WHITE", "left", 0, 101)
     drawText(draw, 16, "", audio_time, "WHITE", "right", 0, 101)
     drawDots(draw, 2, 3)
     OLED.Display_Image(image.rotate(rotate_angle))
+
 
 #----------------------MAIN-------------------------#
 try:
