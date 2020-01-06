@@ -328,6 +328,7 @@ try:
                 if GPIO.input(ir_pin) == 0:
                     start_time = time.time()
                     display_status = True
+                time.sleep(0.01)
     if __name__ == '__main__':
         main()
 except Exception as e:
