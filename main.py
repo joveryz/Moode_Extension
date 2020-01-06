@@ -30,7 +30,6 @@ mpd_music_dir = "/var/lib/mpd/music/"
 mpd_host = 'localhost'
 mpd_port = 6600
 mpd_bufsize = 8192
-soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 scroll_unit = 4
 file_offset = 0
 artist_offset = 0
@@ -137,11 +136,16 @@ def drawDots(draw, index, total):
 #--------------MPD Library---------------#
 
 
-def initALL():
+def initMPD():
+    global soc
+    soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     soc.connect((mpd_host, mpd_port))
     soc.recv(mpd_bufsize)
     soc.send('commands\n')
     rcv = soc.recv(mpd_bufsize)
+
+def initALL():
+    initMPD()
     signal.signal(signal.SIGPIPE, signal.SIG_IGN)
     signal.signal(signal.SIGINT, sigint_handler)
     signal.signal(signal.SIGHUP, sigint_handler)
@@ -300,36 +304,34 @@ def moodeScreen():
 
 #----------------------MAIN-------------------------#
 
-
-try:
-    def main():
-        OLED.Device_Init()
-        initALL()
-        start_time = time.time()
-        cur_time = start_time
-        display_status = True
-        while True:
-            if display_status:
-                cur_time = time.time()
-                if cur_time - start_time > 10:
-                    OLED.Clear_Screen()
-                    display_status = False
-                    continue
-                getDetails()
-                getAudioDevice()
-                if audio_state == "play":
-                    moodeScreen()
-                elif audio_device == 0:
-                    roonScreen()
-                else:
-                    dateScreen()
-                OLED.Delay(50)
+def main():
+    OLED.Device_Init()
+    initALL()
+    start_time = time.time()
+    cur_time = start_time
+    display_status = True
+    while True:
+        if display_status:
+            cur_time = time.time()
+            if cur_time - start_time > 10:
+                OLED.Clear_Screen()
+                display_status = False
+                continue
+            getDetails()
+            getAudioDevice()
+            if audio_state == "play":
+                moodeScreen()
+            elif audio_device == 0:
+                roonScreen()
             else:
-                if GPIO.input(ir_pin) == 0:
-                    start_time = time.time()
-                    display_status = True
-                time.sleep(0.01)
-    if __name__ == '__main__':
-        main()
-except Exception as e:
-    print(e)
+                dateScreen()
+            OLED.Delay(50)
+        else:
+            if GPIO.input(ir_pin) == 0:
+                start_time = time.time()
+                display_status = True
+                initMPD()
+            time.sleep(0.01)
+
+if __name__ == '__main__':
+    main()
