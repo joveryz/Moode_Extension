@@ -19,8 +19,8 @@ import math
 import time
 import os
 import sys
-import importlib
-importlib.reload(sys)
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 
 #--------------Global Vars---------------#
