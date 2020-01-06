@@ -142,6 +142,7 @@ def initALL():
     soc.recv(mpd_bufsize)
     soc.send('commands\n')
     rcv = soc.recv(mpd_bufsize)
+    signal.signal(signal.SIGPIPE, signal.SIG_IGN)
     signal.signal(signal.SIGINT, sigint_handler)
     signal.signal(signal.SIGHUP, sigint_handler)
     signal.signal(signal.SIGTERM, sigint_handler)
@@ -301,7 +302,6 @@ def moodeScreen():
 
 
 try:
-
     def main():
         OLED.Device_Init()
         initALL()
