@@ -306,9 +306,15 @@ try:
         OLED.Device_Init()
         initALL()
         start_time = time.time()
+        cur_time = start_time
+        display_status = True
         while True:
-            cur_time = time.time()
-            if cur_time - start_time <= 10:
+            if display_status:
+                cur_time = time.time()
+                if cur_time - start_time > 10:
+                    OLED.Clear_Screen()
+                    display_status = False
+                    continue
                 getDetails()
                 getAudioDevice()
                 if audio_state == "play":
@@ -319,10 +325,9 @@ try:
                     dateScreen()
                 OLED.Delay(50)
             else:
-                ir_val = GPIO.input(ir_pin)
-                if ir_val == 0:
+                if GPIO.input(ir_pin) == 0:
                     start_time = time.time()
-                OLED.Clear_Screen()
+                    display_status = True
     if __name__ == '__main__':
         main()
 except Exception as e:
