@@ -22,9 +22,9 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-
 #--------------Global Vars---------------#
-is_sigint_up = False
+
+
 rotate_angle = 0
 mpd_music_dir = "/var/lib/mpd/music/"
 mpd_host = 'localhost'
@@ -45,6 +45,7 @@ audio_album = "Unknown"
 audio_title = "Unknown"
 audio_timebar = 0
 audio_device = 0
+ir_pin = 23
 
 #--------------Utils---------------#
 
@@ -57,8 +58,9 @@ def getLANIP():
 
 
 def sigint_handler(signum, frame):
-    global is_sigint_up
-    is_sigint_up = True
+    OLED.Clear_Screen()
+    GPIO.cleanup()
+    exit(0)
 
 
 def getAudioDevice():
@@ -135,11 +137,15 @@ def drawDots(draw, index, total):
 #--------------MPD Library---------------#
 
 
-def initMPD():
+def initALL():
     soc.connect((mpd_host, mpd_port))
     soc.recv(mpd_bufsize)
     soc.send('commands\n')
     rcv = soc.recv(mpd_bufsize)
+    signal.signal(signal.SIGINT, sigint_handler)
+    signal.signal(signal.SIGHUP, sigint_handler)
+    signal.signal(signal.SIGTERM, sigint_handler)
+    GPIO.setup(ir_pin, GPIO.IN)
 
 
 def sendMPDCommand(command):
@@ -291,30 +297,32 @@ def moodeScreen():
     drawDots(draw, 2, 3)
     OLED.Display_Image(image.rotate(rotate_angle))
 
-
 #----------------------MAIN-------------------------#
+
+
 try:
 
     def main():
         OLED.Device_Init()
-        initMPD()
-        signal.signal(signal.SIGINT, sigint_handler)
-        signal.signal(signal.SIGHUP, sigint_handler)
-        signal.signal(signal.SIGTERM, sigint_handler)
+        initALL()
+        start_time = time.time()
         while True:
-            getDetails()
-            getAudioDevice()
-            if audio_state == "play":
-                moodeScreen()
-            elif audio_device == 0:
-                roonScreen()
+            cur_time = time.time()
+            if cur_time - start_time <= 10:
+                getDetails()
+                getAudioDevice()
+                if audio_state == "play":
+                    moodeScreen()
+                elif audio_device == 0:
+                    roonScreen()
+                else:
+                    dateScreen()
+                OLED.Delay(50)
             else:
-                dateScreen()
-            if is_sigint_up:
+                ir_val = GPIO.input(ir_pin)
+                if ir_val == 0:
+                    start_time = time.time()
                 OLED.Clear_Screen()
-                GPIO.cleanup()
-                exit(0)
-            OLED.Delay(50)
     if __name__ == '__main__':
         main()
 except Exception as e:
