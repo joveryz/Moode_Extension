@@ -5,7 +5,8 @@ After=mpd.service
 [Service]
 ExecStartPre=/bin/sleep 10
 ExecStart=/usr/bin/python /home/pi/MPD_Extension/main.py
-StandardOutput=null
+StandardOutput=syslog
+StandardError=syslog
 Type=simple
 Restart=always
 
