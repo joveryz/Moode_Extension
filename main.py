@@ -67,11 +67,14 @@ def getAudioDevice():
     cmd = "aplay -l | grep -A 2 'USB' | grep 'Subdevices'"
     p = Popen(cmd, shell=True, stdout=PIPE)
     output = p.communicate()[0]
-    output = re.split(':', str(output))[1]
-    if re.split('/', output)[0].strip() == "1":
-        audio_device = 1
+    if output == "":
+        audio_device = -1
     else:
-        audio_device = 0
+        output = re.split(':', str(output))[1]
+        if re.split('/', output)[0].strip() == "1":
+            audio_device = 1
+        else:
+            audio_device = 0
 
 
 def sec2Time(sec):
@@ -231,6 +234,23 @@ def getDetails():
 #-------------Display Functions---------------#
 
 
+def detectScreen():
+    image = Image.new("RGB", (OLED.SSD1351_WIDTH,
+                              OLED.SSD1351_HEIGHT), "BLACK")
+    draw = ImageDraw.Draw(image)
+    cur_time = time.strftime("%H:%M:%S %a", time.localtime())
+    cur_date = time.strftime("%Y-%m-%d", time.localtime())
+    cur_ip = getLANIP()
+    if cur_ip == "":
+        cur_ip = "Unknown"
+    drawText(draw, 15, "", "moOde Audio", "WHITE", "center", 0, 5)
+    drawText(draw, 20, "", cur_date, "WHITE", "center", 0, 30)
+    drawText(draw, 20, "", cur_time, "WHITE", "center", 0, 51)
+    drawText(draw, 15, "\uf6ff ", cur_ip, "WHITE", "left", 5, 80)
+    drawText(draw, 15, "\uf83e ", "Dectecting", "WHITE", "center", 5, 96)
+    drawText(draw, 15, "\uf83e ", "USB Audio", "WHITE", "center", 5, 112)
+    OLED.Display_Image(image.rotate(rotate_angle))
+
 def dateScreen():
     image = Image.new("RGB", (OLED.SSD1351_WIDTH,
                               OLED.SSD1351_HEIGHT), "BLACK")
@@ -238,6 +258,8 @@ def dateScreen():
     cur_time = time.strftime("%H:%M:%S %a", time.localtime())
     cur_date = time.strftime("%Y-%m-%d", time.localtime())
     cur_ip = getLANIP()
+    if cur_ip == "":
+        cur_ip = "Unknown"
     drawText(draw, 15, "", "moOde Audio", "WHITE", "center", 0, 5)
     drawText(draw, 20, "", cur_date, "WHITE", "center", 0, 30)
     drawText(draw, 20, "", cur_time, "WHITE", "center", 0, 51)
@@ -323,8 +345,10 @@ def main():
                 moodeScreen()
             elif audio_device == 0:
                 roonScreen()
-            else:
+            elif audio_device == 1:
                 dateScreen()
+            elif audio_device == -1:
+                detectScreen()
             OLED.Delay(50)
         else:
             if GPIO.input(ir_pin) == 0:
