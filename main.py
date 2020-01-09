@@ -247,8 +247,8 @@ def detectScreen():
     drawText(draw, 20, "", cur_date, "WHITE", "center", 0, 30)
     drawText(draw, 20, "", cur_time, "WHITE", "center", 0, 51)
     drawText(draw, 15, "\uf6ff ", cur_ip, "WHITE", "left", 5, 80)
-    drawText(draw, 15, "\uf83e ", "Dectecting", "WHITE", "center", 5, 96)
-    drawText(draw, 15, "\uf83e ", "USB Audio", "WHITE", "center", 5, 112)
+    drawText(draw, 15, "", "Detecting", "WHITE", "center", 5, 96)
+    drawText(draw, 15, "", "USB Audio", "WHITE", "center", 5, 112)
     OLED.Display_Image(image.rotate(rotate_angle))
 
 def dateScreen():
