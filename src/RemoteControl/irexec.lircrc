@@ -1,0 +1,33 @@
+#
+# Initial test configuration for systemwide irexec service.
+#
+# Note that the system-wide service is useful only in corner-cases.
+# Most scenarios are better off with a session service as described in the
+# Configuration Guide. However, note that both can also be combined.
+#
+# Also note that the system-wide service runs without a terminal. To
+# check the output generated use something like
+# 'journalctl -b0 /usr/bin/irexec'. This service just echoes some keys
+# commonly available.
+#
+
+begin
+prog = irexec
+button = KEY_UP
+config = /usr/bin/mpc pre 
+end
+
+begin
+prog = irexec
+button = KEY_DOWN
+config = /usr/bin/mpc next
+end
+
+begin
+prog = irexec
+button = KEY_OK
+config = /usr/bin/mpc toggle
+delay = 2
+repeat = 3
+end
+
