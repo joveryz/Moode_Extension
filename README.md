@@ -1,6 +1,7 @@
 # Moode_Extension
 Extensions for Moode, including OLED display, IR control and CD playback.
 For now, it is running in a RPi4B with Moode 6.4.0.
+With this extension, you can use Apple Remote to control Moode in RPi4B and roon in Windows.
 
 # Demo
 ![](./doc/Demo.jpg)
@@ -10,6 +11,7 @@ For now, it is running in a RPi4B with Moode 6.4.0.
 - [Argon One Case](https://www.argon40.com/catalog/product/view/id/52/s/argon-one-raspberry-pi-4-case) for RPi4B
 - [1.5inch RGB OLED Module](http://www.waveshare.net/wiki/1.5inch_RGB_OLED_Module), made by WAVESHARE
 - VS1838B Infrared Receiver Module
+- [Flirc usb ir reciver](https://flirc.tv/support/flirc-usb)
 - Apple Remote A1294
 - CD Drive with usb port
 
@@ -17,6 +19,7 @@ For now, it is running in a RPi4B with Moode 6.4.0.
 
 ## IR Reciver Module
 The Argon One Case reserved a place for VS1838B, just connect it.
+Insert Flirc USB IR Reciver into a windows pc.
 
 ## OLED Module
 ![](./doc/OLED.jpg)
@@ -83,3 +86,17 @@ sudo cp src/CDPlayback/99-srX_change.rules /etc/udev/rules.d/
 
 When you insert a CD, it will generate a playlist named CDPlayer automatically.
 ![](./doc/CDPlayer.jpg)
+
+# Usage
+After installation, you can use Apple Remote to control Moode in RPi4B and roon in Windows.
+Here is the key mapping.
+
+|Apple Remote Key|Description|
+|-|-|
+|UP|Moode: Previous Track|
+|DOWN|Moode: Next Track|
+|Enter|Moode: Play/Pause|
+|LEFT|Roon in windows: Previous Track|
+|Right|Roon in windows: Next Track|
+|Play|Roon in windows: Play/Pause|
+|Menu|Moode: Eject CD|
