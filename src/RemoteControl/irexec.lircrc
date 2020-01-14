@@ -30,4 +30,3 @@ config = /usr/bin/mpc toggle
 delay = 2
 repeat = 3
 end
-

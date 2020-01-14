@@ -1,1 +1,1 @@
-KERNEL=="sr[0-9]", ACTION=="change", ENV{ID_CDROM_MEDIA}=="1", ENV{ID_CDROM_MEDIA_TRACK_COUNT_AUDIO}=="[0-9]|[0-9][0-9]", RUN+="/home/pi/MPD_Extension/geneCD.sh"
+KERNEL=="sr[0-9]", ACTION=="change", ENV{ID_CDROM_MEDIA}=="1", ENV{ID_CDROM_MEDIA_TRACK_COUNT_AUDIO}=="[0-9]|[0-9][0-9]", RUN+="/home/pi/Moode_Extension/src/CDPlayer/geneCD.sh"
