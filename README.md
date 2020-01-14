@@ -39,7 +39,7 @@ The Argon One Case reserved a place for VS1838B, just connect it.
 
 - Use `sudo apt-get install eject cdparanoia cdde inotify-tools` to install packages required by CD playback.
 
-## OLED Module
+## OLED Display
 ```
 cd /home/pi
 git clone https://github.com/TongboZhang/Moode_Extension.git
@@ -78,7 +78,7 @@ sudo systemctl enable irexec
 
 ```
 sudo chmod 755 geneCD.sh
-sudo cp 99-srX_change.rules /etc/udev/rules.d/
+sudo cp src/CDPlayback/99-srX_change.rules /etc/udev/rules.d/
 ```
 
 When you insert a CD, it will generate a playlist named CDPlayer automatically.
