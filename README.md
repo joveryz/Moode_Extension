@@ -3,7 +3,7 @@ Extensions for Moode, including OLED display, IR control and CD playback.
 For now, it is running in a RPi4B with Moode 6.4.0.
 
 # Demo
-todo
+![](./doc/Demo.jpg)
 
 # Hardware
 - Raspberry Pi 4B
