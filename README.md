@@ -42,21 +42,37 @@ The Argon One Case reserved a place for VS1838B, just connect it.
 ## OLED Module
 ```
 cd /home/pi
-git clone https://github.com/TongboZhang/MPD_Extension.git
-cd MPD_Extension
-sudo chmod 755 main.py
-sudo cp oledd.service /etc/systemd/system/
+git clone https://github.com/TongboZhang/Moode_Extension.git
+cd Moode_Extension
+sudo chmod 755 src/OLEDDisplay/main.py
+sudo cp src/OLEDDisplay/oledd.service /etc/systemd/system/
 
 # Test OLED display
 sudo systemctl start oledd
-# Wait 10 seconds to start oledd and check
+# Wait 10 seconds to start the service
+sudo systemctl status oledd
 
 # Make OLED service automatically start on boot
 sudo systemctl enable oledd
 ```
 
 ## Remote Control
-todo
+```
+sudo cp src/RemoteControl/apple-silver-A1294-lircd.conf /etc/lirc/lircd.conf.d/
+sudo cp src/RemoteControl/irexec.lircrc /etc/lirc
+
+# Test LIRC service
+sudo systemctl start lircd
+sudo systemctl status lircd
+
+# Test IREXEC service
+sudo systemctl start irexec
+sudo systemctl status irexec
+
+# Make LIRC and IREXEC service automatically start on boot
+sudo systemctl enable lircd
+sudo systemctl enable irexec
+```
 
 ## CD Playback
 
