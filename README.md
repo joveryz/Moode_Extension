@@ -96,7 +96,7 @@ sudo systemctl enable irexec
 ## CD Playback
 
 ```
-sudo chmod 755 geneCD.sh
+sudo chmod 755 src/CDPlayback/geneCD.sh
 sudo cp src/CDPlayback/99-srX_change.rules /etc/udev/rules.d/
 ```
 
