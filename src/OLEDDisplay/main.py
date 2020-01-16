@@ -25,7 +25,7 @@ sys.setdefaultencoding('utf-8')
 #--------------Global Vars---------------#
 
 
-rotate_angle = 0
+rotate_angle = -90
 mpd_music_dir = "/var/lib/mpd/music/"
 mpd_host = 'localhost'
 mpd_port = 6600
@@ -335,7 +335,7 @@ def main():
     while True:
         if display_status:
             cur_time = time.time()
-            if cur_time - start_time > 10:
+            if cur_time - start_time > 30:
                 OLED.Clear_Screen()
                 display_status = False
                 continue
