@@ -52,8 +52,15 @@ ir_pin = 23
 def getLANIP():
     cmd = "ip addr show eth0 | grep inet  | grep -v inet6 | awk '{print $2}' | cut -d '/' -f 1"
     p = Popen(cmd, shell=True, stdout=PIPE)
-    output = p.communicate()[0]
-    return output[:-1]
+    output = p.communicate()[0][:-1]
+    if output != "":
+        return output
+    cmd = "ip addr show wlan0 | grep inet  | grep -v inet6 | awk '{print $2}' | cut -d '/' -f 1"
+    p = Popen(cmd, shell=True, stdout=PIPE)
+    output = p.communicate()[0][:-1]
+    if output != "":
+        return output
+    return "Unknown"
 
 
 def sigint_handler(signum, frame):
@@ -241,8 +248,6 @@ def detectScreen():
     cur_time = time.strftime("%H:%M:%S %a", time.localtime())
     cur_date = time.strftime("%Y-%m-%d", time.localtime())
     cur_ip = getLANIP()
-    if cur_ip == "":
-        cur_ip = "Unknown"
     drawText(draw, 15, "", "moOde Audio", "WHITE", "center", 0, 5)
     drawText(draw, 20, "", cur_date, "WHITE", "center", 0, 30)
     drawText(draw, 20, "", cur_time, "WHITE", "center", 0, 51)
@@ -258,8 +263,6 @@ def dateScreen():
     cur_time = time.strftime("%H:%M:%S %a", time.localtime())
     cur_date = time.strftime("%Y-%m-%d", time.localtime())
     cur_ip = getLANIP()
-    if cur_ip == "":
-        cur_ip = "Unknown"
     drawText(draw, 15, "", "moOde Audio", "WHITE", "center", 0, 5)
     drawText(draw, 20, "", cur_date, "WHITE", "center", 0, 30)
     drawText(draw, 20, "", cur_time, "WHITE", "center", 0, 51)
