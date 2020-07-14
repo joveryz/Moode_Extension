@@ -4,7 +4,7 @@ After=mpd.service
 
 [Service]
 ExecStartPre=/bin/sleep 10
-ExecStart=/usr/bin/python /home/pi/Moode_Extension/src/OLEDDisplay/main.py
+ExecStart=/usr/bin/python3 /home/pi/Moode_Extension/src/OLEDDisplay/main.py
 StandardOutput=syslog
 StandardError=syslog
 Type=simple

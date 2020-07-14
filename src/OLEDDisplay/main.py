@@ -19,8 +19,6 @@ import math
 import time
 import os
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
 
 #--------------Global Vars---------------#
 
@@ -53,13 +51,13 @@ def getLANIP():
     cmd = "ip addr show eth0 | grep inet  | grep -v inet6 | awk '{print $2}' | cut -d '/' -f 1"
     p = Popen(cmd, shell=True, stdout=PIPE)
     output = p.communicate()[0][:-1]
-    if output != "":
-        return output
+    if output != b"":
+        return output.decode()
     cmd = "ip addr show wlan0 | grep inet  | grep -v inet6 | awk '{print $2}' | cut -d '/' -f 1"
     p = Popen(cmd, shell=True, stdout=PIPE)
     output = p.communicate()[0][:-1]
-    if output != "":
-        return output
+    if output != b"":
+        return output.decode()
     return "Unknown"
 
 
@@ -151,7 +149,7 @@ def initMPD():
     soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     soc.connect((mpd_host, mpd_port))
     soc.recv(mpd_bufsize)
-    soc.send('commands\n')
+    soc.send('commands\n'.encode())
     rcv = soc.recv(mpd_bufsize)
 
 def initALL():
@@ -164,7 +162,7 @@ def initALL():
 
 
 def sendMPDCommand(command):
-    soc.send(command + "\n")
+    soc.send((command + "\n").encode())
     rcv = soc.recv(mpd_bufsize)
     return rcv
 
@@ -214,15 +212,16 @@ def getDetails():
     audio_album = "Unknown"
     audio_title = "Unknown"
     for line in range(0, len(state_list)):
-        if state_list[line].startswith("state: "):
-            audio_state = state_list[line].replace("state: ", "")
+        curr_line = state_list[line].decode()
+        if curr_line.startswith("state: "):
+            audio_state = curr_line.replace("state: ", "")
             if audio_state != "play":
                 return
-        elif state_list[line].startswith("audio: "):
-            audio_rate = parseAudioRate(state_list[line])
-        elif state_list[line].startswith("time: "):
-            audio_time = state_list[line].split(":")[2]
-            audio_elapsed = state_list[line].split(":")[1]
+        elif curr_line.startswith("audio: "):
+            audio_rate = parseAudioRate(curr_line)
+        elif curr_line.startswith("time: "):
+            audio_time = curr_line.split(":")[2]
+            audio_elapsed = curr_line.split(":")[1]
             audio_timebar = math.ceil(
                 float(audio_elapsed) / float(audio_time) * OLED.SSD1351_WIDTH)
             audio_time = sec2Time(audio_time)
