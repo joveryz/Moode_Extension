@@ -11,7 +11,7 @@ ExecStart=/home/pi/Moode_Extension/src/TidalConnect/tidal_connect_application \
 				--disable-app-security false \
 				--disable-web-security false \
 				--enable-mqa-passthrough false \
-				--playback-device "Project RS USB Audio 2.0: - (hw:1,0)" \
+				--playback-device "AGVA Technologeis MOX Audio: USB Audio (hw:2,0)" \
 				--log-level 3
 User=root
 Group=root

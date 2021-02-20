@@ -79,7 +79,7 @@ sudo systemctl enable oledd
 ## Tidal Connect
 ```
 apt-get install libflac++6v5*
-
+sudo chmod 755 src/TidalConnect/tidal_connect_application
 ```
 
 ## Remote Control
