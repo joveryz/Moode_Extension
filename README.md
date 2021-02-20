@@ -60,9 +60,21 @@ Insert Flirc USB IR receiver into a windows pc.
 
 ## OLED Display
 ```
+wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.68.tar.gz
+tar zxvf bcm2835-1.68.tar.gz 
+cd bcm2835-1.68/
+sudo ./configure && sudo make && sudo make check && sudo make install
+
+sudo apt-get update
+sudo apt-get install -y wiringpi python3-pip python3-pil python3-numpy
+sudo pip3 install RPi.GPIO
+sudo pip3 install spidev
+
+
 cd /home/pi
 git clone https://github.com/TongboZhang/Moode_Extension.git
 cd Moode_Extension
+sudo pip3 install luma.oled
 sudo chmod 755 src/OLEDDisplay/main.py
 sudo cp src/OLEDDisplay/oledd.service /etc/systemd/system/
 

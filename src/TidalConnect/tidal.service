@@ -1,0 +1,21 @@
+[Unit]
+Description=Tidal Connect Service
+[Service]
+Restart=on-failure
+ExecStart=/home/pi/Moode_Extension/src/TidalConnect/tidal_connect_application \
+				--tc-certificate-path "/home/pi/Moode_Extension/src/TidalConnect/cert.dat" \
+				-f "Moode Renderer" \
+				--codec-mpegh true \
+				--codec-mqa false \
+				--model-name "Moode Renderer" \
+				--disable-app-security false \
+				--disable-web-security false \
+				--enable-mqa-passthrough false \
+				--playback-device "Project RS USB Audio 2.0: - (hw:1,0)" \
+				--log-level 3
+User=root
+Group=root
+RestartSec=1
+KillMode=control-group
+[Install]
+WantedBy=multi-user.target
