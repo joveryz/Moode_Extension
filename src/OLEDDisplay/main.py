@@ -72,7 +72,7 @@ def getAudioDevice():
     cmd = "aplay -l | grep -A 2 'USB' | grep 'Subdevices'"
     p = Popen(cmd, shell=True, stdout=PIPE)
     output = p.communicate()[0]
-    if output == "":
+    if output == b"":
         audio_device = -1
     else:
         output = re.split(':', str(output))[1]
@@ -266,7 +266,7 @@ def dateScreen():
     drawText(draw, 20, "", cur_date, "WHITE", "center", 0, 30)
     drawText(draw, 20, "", cur_time, "WHITE", "center", 0, 51)
     drawText(draw, 15, "\uf6ff ", cur_ip, "WHITE", "left", 5, 80)
-    drawText(draw, 15, "\uf83e ", "Goldenwave II", "WHITE", "left", 5, 96)
+    drawText(draw, 15, "\uf83e ", "MOX + D300", "WHITE", "left", 5, 96)
     drawDots(draw, 1, 3)
     OLED.Display_Image(image.rotate(rotate_angle))
 
@@ -275,10 +275,11 @@ def roonScreen():
     image = Image.new("RGB", (OLED.SSD1351_WIDTH,
                               OLED.SSD1351_HEIGHT), "BLACK")
     draw = ImageDraw.Draw(image)
+    cur_ip = getLANIP()
     drawText(draw, 20, "", "Renderers", "WHITE", "center", 0, 18)
-    drawText(draw, 20, "", "ROON/HQ/BLE", "WHITE", "center", 0, 42)
-    drawText(draw, 15, "\uf6ff ", "192.168.50.200", "WHITE", "center", 0, 80)
-    drawText(draw, 15, "\uf83e ", "Goldenwave II", "WHITE", "center", 0, 96)
+    drawText(draw, 20, "", "RN/TD/HQ/BL", "WHITE", "center", 0, 42)
+    drawText(draw, 15, "\uf6ff ", cur_ip, "WHITE", "left", 5, 80)
+    drawText(draw, 15, "\uf83e ", "MOX + D300", "WHITE", "left", 5, 96)
     drawDots(draw, 3, 3)
     OLED.Display_Image(image.rotate(rotate_angle))
 
