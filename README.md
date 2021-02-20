@@ -78,8 +78,24 @@ sudo systemctl enable oledd
 
 ## Tidal Connect
 ```
-apt-get install libflac++6v5*
+sudo su
+echo "deb http://archive.raspbian.org/raspbian stretch main" >> /etc/apt/sources.list
+exit
+sudo apt update
+sudo apt install -y multiarch-support libavformat57 git libportaudio2* libflac++6v5* libavahi-common3 libavahi-client3 alsa-utils
+curl -k -O -L http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u12_armhf.deb
+sudo apt install -y ./libssl1.0.0_1.0.1t-1+deb8u12_armhf.deb
+curl -k -O -L http://security.debian.org/debian-security/pool/updates/main/c/curl/libcurl3_7.38.0-4+deb8u16_armhf.deb
+sudo apt install -y ./libcurl3_7.38.0-4+deb8u16_armhf.deb
 sudo chmod 755 src/TidalConnect/tidal_connect_application
+sudo cp src/TidalConnect/tidal.service /etc/systemd/system/
+
+# Test Tidal Connect service
+sudo systemctl start tidal
+sudo systemctl status tidal
+
+# Make Tidal Connect service automatically start on boot
+sudo systemctl enable tidal
 ```
 
 ## Remote Control
